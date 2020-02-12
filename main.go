@@ -7,6 +7,8 @@ import (
 	"github.com/ricdeau/in-mem-kv-storage/middleware"
 	"github.com/ricdeau/in-mem-kv-storage/service"
 	"github.com/ricdeau/in-mem-kv-storage/storage"
+	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -15,9 +17,10 @@ const (
 )
 
 var (
-	port         = flag.Int("port", 5339, "Server listening port")
-	maxKeySize   = flag.Int("max-key-size", 0, "Max key size in bytes. If <=0 - unlimited")
-	maxValueSize = flag.Int("max-value-size", 0, "Max value size in bytes. If <=0 - unlimited")
+	verbosity    = flag.Bool("v", false, "Print logs to stdout")
+	port         = flag.Int("p", 5339, "Server listening port")
+	maxKeySize   = flag.Int("mks", 0, "Max key size in bytes. If <=0 - unlimited")
+	maxValueSize = flag.Int("mvs", 0, "Max value size in bytes. If <=0 - unlimited")
 )
 
 func init() {
@@ -25,12 +28,15 @@ func init() {
 }
 
 func main() {
+	if !*verbosity {
+		log.SetOutput(ioutil.Discard)
+	}
 	srv := service.New(route, storage.New())
 	srv = middleware.LimitsMiddleware(srv, route, *maxKeySize, *maxValueSize)
 	srv = middleware.LoggingMiddleware(srv)
 	http.Handle(route, srv)
 
-	logger.Infof("Server start listening at port %d", *port)
+	logger.Infof("Server start listening on port %d", *port)
 	logger.Infof("Operations url: %s", route)
 	logger.Infof("Max key size: %s", sizeToString(*maxKeySize))
 	logger.Infof("Max value size: %s", sizeToString(*maxValueSize))
