@@ -1,9 +1,10 @@
 package service
 
 import (
-	"encoding/json"
 	"github.com/ricdeau/in-mem-kv-storage/contracts"
+	"github.com/ricdeau/in-mem-kv-storage/logger"
 	"github.com/ricdeau/in-mem-kv-storage/storage"
+	"github.com/ricdeau/in-mem-kv-storage/utils"
 	"io/ioutil"
 	"net/http"
 )
@@ -17,7 +18,6 @@ const (
 const (
 	contentType        = "Content-Type"
 	defaultContentType = "application/octet-stream"
-	jsonContentType    = "application/json"
 )
 
 type service struct {
@@ -43,20 +43,26 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *service) handleGet(rw http.ResponseWriter, r *http.Request) {
+	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
 	value, exists := s.stor.Get(key)
 	if !exists {
-		errorResponse(http.StatusNotFound, contracts.NotExistsError(key), rw)
+		logger.Infof("RequestId: %v; Value with key=%s doesn't exist", requestId, key)
+		utils.ErrorResponse(http.StatusNotFound, contracts.NotExistsError(key), rw)
 		return
 	}
 	rw.Header().Set(contentType, value.Type)
 	_, err := rw.Write(value.Payload)
 	if err != nil {
+		logger.Errorf("RequestId: %v; Error while writing response: %v", requestId, err)
 		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	logger.Infof("RequestId: %v; Value with key=%s has been retrieved", requestId, key)
 }
 
-func (s *service) handlePut(w http.ResponseWriter, r *http.Request) {
+func (s *service) handlePut(rw http.ResponseWriter, r *http.Request) {
+	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
 	contentType := r.Header.Get(contentType)
 	if contentType == "" {
@@ -65,27 +71,21 @@ func (s *service) handlePut(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		logger.Errorf("RequestId: %v; Error while writing response: %v", requestId, err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	isNew := s.stor.Set(key, storage.Data{Type: contentType, Payload: data})
 	if isNew {
-		w.WriteHeader(http.StatusCreated)
+		rw.WriteHeader(http.StatusCreated)
 	}
+	logger.Infof("RequestId: %v; Value with key=%s has been saved", requestId, key)
 }
 
 func (s *service) handleDelete(rw http.ResponseWriter, r *http.Request) {
+	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
 	s.stor.Delete(key)
 	rw.WriteHeader(http.StatusNoContent)
-}
-
-func errorResponse(status int, error *contracts.Error, rw http.ResponseWriter) {
-	rw.Header().Set(contentType, jsonContentType)
-	rw.WriteHeader(status)
-	err := json.NewEncoder(rw).Encode(error)
-	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	logger.Infof("RequestId: %v; Value with key=%s has been deleted", requestId, key)
 }
