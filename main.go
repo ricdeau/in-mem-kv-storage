@@ -33,7 +33,7 @@ func main() {
 	}
 	srv := service.New(route, storage.New())
 	srv = middleware.LimitsMiddleware(srv, route, *maxKeySize, *maxValueSize)
-	srv = middleware.LoggingMiddleware(srv)
+	srv = middleware.RequestIDMiddleware(srv)
 	http.Handle(route, srv)
 
 	logger.Infof("Server start listening on port %d", *port)

@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"github.com/ricdeau/in-mem-kv-storage/middleware"
+	"github.com/ricdeau/in-mem-kv-storage/utils"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -10,26 +11,31 @@ import (
 	"testing"
 )
 
-func TestLogging(t *testing.T) {
+func TestRequestId(t *testing.T) {
 	buf := bytes.NewBufferString("")
 	log.SetOutput(buf)
-	request := httptest.NewRequest("GET", "http://localhost/api", nil)
-	handler := func(http.ResponseWriter, *http.Request) {}
-	var logging http.Handler = middleware.LoggingMiddleware(http.HandlerFunc(handler))
+	request := httptest.NewRequest("GET", "/api/", nil)
+	handler := func(rw http.ResponseWriter, r *http.Request) {
+		requestID := r.Context().Value(utils.RequestID)
+		if requestID == nil {
+			t.Errorf("RequestID hasn't been set")
+		}
+	}
+	var logging http.Handler = middleware.RequestIDMiddleware(http.HandlerFunc(handler))
 	logging.ServeHTTP(httptest.NewRecorder(), request)
 
 	logLine := buf.String()
-	if !strings.Contains(logLine, "RequestId") {
-		t.Errorf("Log line doesn't contain 'RequestId'")
+	if !strings.Contains(logLine, "RequestID") {
+		t.Errorf("Log line doesn't contain 'RequestID'")
 	}
-	if !strings.Contains(logLine, "Method: GET, path: /api, size: 0") {
-		t.Errorf("Log line doesn't contain 'Method: GET, path: /api, size: 0'")
+	if !strings.Contains(logLine, "Method: GET, path: /api/, size: 0") {
+		t.Errorf("Log line doesn't contain 'Method: GET, path: /api/, size: 0'")
 	}
 }
 
 func TestLimitsKeyToLong(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 1000))
-	request := httptest.NewRequest("PUT", "http://localhost/api/key", buf)
+	request := httptest.NewRequest("PUT", "/api/key", buf)
 	handler := func(http.ResponseWriter, *http.Request) {}
 	var limits http.Handler = middleware.LimitsMiddleware(http.HandlerFunc(handler), "/api/", 2, 5000)
 	recorder := httptest.NewRecorder()
@@ -48,7 +54,7 @@ func TestLimitsKeyToLong(t *testing.T) {
 
 func TestLimitsValueToLong(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 1000))
-	request := httptest.NewRequest("PUT", "http://localhost/api/key", buf)
+	request := httptest.NewRequest("PUT", "/api/key", buf)
 	handler := func(http.ResponseWriter, *http.Request) {}
 	var limits http.Handler = middleware.LimitsMiddleware(http.HandlerFunc(handler), "/api/", 10, 500)
 	recorder := httptest.NewRecorder()
@@ -67,7 +73,7 @@ func TestLimitsValueToLong(t *testing.T) {
 
 func TestLimitsValid(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 1000))
-	request := httptest.NewRequest("PUT", "http://localhost/api/key", buf)
+	request := httptest.NewRequest("PUT", "/api/key", buf)
 	const expectedBody = "pass"
 	handler := func(rw http.ResponseWriter, r *http.Request) {
 		_, _ = rw.Write([]byte(expectedBody))

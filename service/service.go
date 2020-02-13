@@ -9,21 +9,18 @@ import (
 	"net/http"
 )
 
+// Headers
 const (
-	GET    = "GET"
-	PUT    = "PUT"
-	DELETE = "DELETE"
-)
-
-const (
-	contentType        = "Content-Type"
-	defaultContentType = "application/octet-stream"
+	contentType = "Content-Type"
+	allow       = "Allow"
 )
 
 type service struct {
 	stor storage.Storage
 }
 
+// New creates http.Handler that performs operations with storage.Storage depending on http method.
+// Allowed methods: GET, PUT, DELETE, OPTIONS
 func New(route string, stor storage.Storage) http.Handler {
 	srv := &service{stor}
 	return http.StripPrefix(route, srv)
@@ -31,61 +28,66 @@ func New(route string, stor storage.Storage) http.Handler {
 
 func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case GET:
+	case "GET":
 		s.handleGet(w, r)
-	case PUT:
+	case "PUT":
 		s.handlePut(w, r)
-	case DELETE:
+	case "DELETE":
 		s.handleDelete(w, r)
+	case "OPTIONS":
+		s.handleOptions(w)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
 func (s *service) handleGet(rw http.ResponseWriter, r *http.Request) {
-	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
+	requestIDPrefix := utils.RequestIDPrefix(r.Context())
 	value, exists := s.stor.Get(key)
 	if !exists {
-		logger.Infof("RequestId: %v; Value with key=%s doesn't exist", requestId, key)
+		logger.Infof("%s; Value with key=%s doesn't exist", requestIDPrefix, key)
 		utils.ErrorResponse(http.StatusNotFound, contracts.NotExistsError(key), rw)
 		return
 	}
 	rw.Header().Set(contentType, value.Type)
 	_, err := rw.Write(value.Payload)
 	if err != nil {
-		logger.Errorf("RequestId: %v; Error while writing response: %v", requestId, err)
+		logger.Errorf("%s; Error while writing response: %v", requestIDPrefix, err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	logger.Infof("RequestId: %v; Value with key=%s has been retrieved", requestId, key)
+	logger.Infof("%s; Value with key=%s has been retrieved", requestIDPrefix, key)
 }
 
 func (s *service) handlePut(rw http.ResponseWriter, r *http.Request) {
-	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
-	contentType := r.Header.Get(contentType)
-	if contentType == "" {
-		contentType = defaultContentType
-	}
+	requestIDPrefix := utils.RequestIDPrefix(r.Context())
 	data, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
-		logger.Errorf("RequestId: %v; Error while writing response: %v", requestId, err)
+		logger.Errorf("%s; Error while writing response: %v", requestIDPrefix, err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	isNew := s.stor.Set(key, storage.Data{Type: contentType, Payload: data})
+	contentType := r.Header.Get(contentType)
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+	isNew := s.stor.Set(key, &storage.Data{Type: contentType, Payload: data})
 	if isNew {
 		rw.WriteHeader(http.StatusCreated)
 	}
-	logger.Infof("RequestId: %v; Value with key=%s has been saved", requestId, key)
+	logger.Infof("%s; Value with key=%s has been saved", requestIDPrefix, key)
 }
 
 func (s *service) handleDelete(rw http.ResponseWriter, r *http.Request) {
-	requestId := r.Context().Value(utils.RequestId)
 	key := r.URL.Path
+	requestIDPrefix := utils.RequestIDPrefix(r.Context())
 	s.stor.Delete(key)
 	rw.WriteHeader(http.StatusNoContent)
-	logger.Infof("RequestId: %v; Value with key=%s has been deleted", requestId, key)
+	logger.Infof("%s; Value with key=%s has been deleted", requestIDPrefix, key)
+}
+
+func (s *service) handleOptions(rw http.ResponseWriter) {
+	rw.Header().Set(allow, "GET, PUT, DELETE, OPTIONS")
 }

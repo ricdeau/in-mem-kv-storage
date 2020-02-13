@@ -16,7 +16,7 @@ func TestStorageCRUD(t *testing.T) {
 		t.Error("Initial data exists")
 	}
 
-	newVal := stor.Set(key, storage.Data{Type: "string", Payload: []byte(data1)})
+	newVal := stor.Set(key, &storage.Data{Type: "string", Payload: []byte(data1)})
 	if !newVal {
 		t.Error("Created value wasn't marked as new")
 	}
@@ -29,7 +29,7 @@ func TestStorageCRUD(t *testing.T) {
 		t.Errorf("Retrieved and initial values does't match")
 	}
 
-	newVal = stor.Set(key, storage.Data{Type: "string", Payload: []byte(data2)})
+	newVal = stor.Set(key, &storage.Data{Type: "string", Payload: []byte(data2)})
 	if newVal {
 		t.Error("Updated value marked as new")
 	}
