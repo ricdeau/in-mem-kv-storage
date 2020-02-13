@@ -1,5 +1,8 @@
 # in-mem-kv-storage
 
+The http service that provides key-value storage functionality.
+Keys and values are stored in memory.
+
 To launch server:
 
     $ git clone https://github.com/ricdeau/in-mem-kv-storage.git
