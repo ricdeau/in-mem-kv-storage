@@ -1,7 +1,7 @@
 # in-mem-kv-storage
 
 The http service that provides key-value storage functionality.
-Keys and values are stored in memory.
+Keys and values are storing in memory.
 
 To launch server:
 
