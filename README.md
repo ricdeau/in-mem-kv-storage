@@ -2,7 +2,7 @@
 
 To launch server:
 
-    $ git clone github.com/ricdeau/in-mem-kv-storage
+    $ git clone https://github.com/ricdeau/in-mem-kv-storage.git
  
     $ cd ./in-mem-kv-storage
  
