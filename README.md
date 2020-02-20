@@ -1,4 +1,4 @@
-# in-mem-kv-storage [![Build Status](https://travis-ci.org/ricdeau/in-mem-kv-storage.svg?branch=master)](https://travis-ci.org/ricdeau/in-mem-kv-storage) [![Go Report Card](https://goreportcard.com/badge/github.com/ricdeau/in-mem-kv-storage)](https://goreportcard.com/report/github.com/ricdeau/in-mem-kv-storage)
+# in-mem-kv-storage [![Build Status](https://travis-ci.org/ricdeau/in-mem-kv-storage.svg?branch=master)](https://travis-ci.org/ricdeau/in-mem-kv-storage) [![Coverage Status](https://coveralls.io/repos/github/ricdeau/in-mem-kv-storage/badge.svg?branch=master)](https://coveralls.io/github/ricdeau/in-mem-kv-storage?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ricdeau/in-mem-kv-storage)](https://goreportcard.com/report/github.com/ricdeau/in-mem-kv-storage)
 
 The http service that provides key-value storage functionality.
 Keys and values are stored in memory.
